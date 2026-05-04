@@ -1,0 +1,12 @@
+names:
+- cok iyi
+- cok kotu
+- curuk
+- iyi cig
+- kusur
+- yari iyi
+nc: 6
+path: /home/yuzril/project/task1/objek-kusur-tespiti-10
+test: test/images
+train: train/images
+val: valid/images
