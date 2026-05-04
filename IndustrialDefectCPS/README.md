@@ -19,4 +19,5 @@ yolo segment predict model=models/best.onnx
 - **Edge FPS**: 1.65 (ESP32-S3)
 - **Dataset**: [Zenodo DOI](https://doi.org/10.5281/zenodo.19928743)
 
-## 🏗️ Structure
+YOLOv8s-seg ONNX (45.2MB): https://drive.google.com/file/d/16Ye5VEiRt2pajGoQh1zvU2-dNVlpgCD1/view?usp=sharing 
+YOLOv8m-seg (52.3MB): https://drive.google.com/file/d/1BaaVWmwhM8FtyxadlV4PELlmAzVrEe8A/view?usp=sharing
