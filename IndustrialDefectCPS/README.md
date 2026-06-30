@@ -1,25 +1,27 @@
-# Industrial Defect CPS - YOLOv8s-seg (93.8% mAP@0.5)
+# Cyber-Physical System (CPS) Based Automatic Sorting System
 
-Low-cost ($1543) Cyber-Physical System for real-time defect sorting.
+This repository contains the systematic procedures and source code to configure, deploy, and execute a **Cyber-Physical System (CPS) Based Automatic Sorting System**. The architecture integrates a deep learning model (YOLOv8m-seg), microcontroller serial communication, and an automated IoT Agent framework.
 
-yolo segment predict model=models/best.onnx
+---
 
-# Dataset Info
+## System Architecture Overview
 
-- **Total**: 1331 images (proxy spherical defects)
-- **Classes**: 6 (cok_iyi, cok_kotu, curuk, iyi_cig, kusur, yari_iyi)
-- **Split**: Train 999 (75%), Val 173 (13%), Test 159 (12%)
-- **Format**: COCO Segmentation JSON
-- **Full dataset**: https://doi.org/10.5281/zenodo.19928743
+1. **AI Perception Layer:** Real-time object detection and segmentation powered by `YOLOv8m-seg`.
+2. **Hardware Control Layer:** ESP32 microcontroller coordinating conveyor mechanics and servo modules.
+3. **IoT Integration Layer:** Automated data pipelines and reporting via Dockerized `n8n` instances exposed through secure `ngrok` tunnels.
 
-## 📊 Key Results
+---
 
-- **mAP@0.5**: 93.8% (6 classes)
-- **mAP50-95**: 89.0%
-- **Edge FPS**: 1.65 (ESP32-S3)
-- **Dataset**: [Zenodo DOI](https://doi.org/10.5281/zenodo.19928743)
+## Prerequisites & Installation
 
-Model 
+### Phase 1: Workspace Setup & Software Dependencies
 
-YOLOv8s-seg ONNX (45.2MB): https://drive.google.com/file/d/16Ye5VEiRt2pajGoQh1zvU2-dNVlpgCD1/view?usp=sharing 
-YOLOv8m-seg (52.3MB): https://drive.google.com/file/d/1BaaVWmwhM8FtyxadlV4PELlmAzVrEe8A/view?usp=sharing
+#### 1. Environment Isolation
+Open the project root directory in your preferred IDE (e.g., VSCode) and initialize a Python virtual environment to avoid dependency conflicts. Additionally, create a local directory named `/frames` to temporarily store inference outputs (bounding boxes & segmentation masks).
+```bash
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
+
+# Create output frames directory
+mkdir frames
