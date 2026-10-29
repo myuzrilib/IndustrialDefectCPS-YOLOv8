@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this hardware or its design files, please cite the HardwareX article."
+title: "CPS-Sort: a low-cost, open-source cyber-physical sorting cell for real-time visual quality inspection on commodity hardware"
+authors:
+  - family-names: "Baharuddin"
+    given-names: "Muh Yuzril Ihza"
+type: software
+license: MIT
+repository-code: "https://github.com/myuzrilib/IndustrialDefectCPS-YOLOv8"

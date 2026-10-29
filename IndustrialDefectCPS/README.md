@@ -1,121 +1,127 @@
-# Cyber-Physical System (CPS) Based Automatic Sorting System
+# Bring-up procedure
 
-This repository contains the systematic procedures and source code to configure, deploy, and execute a **Cyber-Physical System (CPS) Based Automatic Sorting System**. The architecture integrates a deep learning model (YOLOv8m-seg), microcontroller serial communication, and an automated IoT Agent framework.
+How to configure, deploy and run the sorting cell. For what the system is and how it
+works, see the [repository README](../README.md).
 
----
-
-## System Architecture Overview
-
-1. **AI Perception Layer:** Real-time object detection and segmentation powered by `YOLOv8m-seg`.
-2. **Hardware Control Layer:** ESP32 microcontroller coordinating conveyor mechanics and servo modules.
-3. **IoT Integration Layer:** Automated data pipelines and reporting via Dockerized `n8n` instances exposed through secure `ngrok` tunnels.
+The system runs as two processes that share nothing but a file: `final.py` drives the
+sorting loop and writes an event log; `dashboard.py` reads that log and renders it. The
+dashboard can be started, stopped or crashed at any time without affecting sorting.
 
 ---
 
-## Prerequisites & Installation
+## Phase 1 — software
 
-### Phase 1: Workspace Setup & Software Dependencies
+### 1. Environment
 
-#### 1. Environment Isolation
-Open the project root directory in your preferred IDE (e.g., VSCode) and initialize a Python virtual environment to avoid dependency conflicts. Additionally, create a local directory named `/frames` to temporarily store inference outputs (bounding boxes & segmentation masks).
 ```bash
-# Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows use: venv\Scripts\activate
-
-# Create output frames directory
-mkdir frames
+source venv/bin/activate          # Windows: venv\Scripts\activate
+pip install opencv-python ultralytics pyserial numpy tqdm \
+            streamlit pandas plotly pydrive2
+mkdir -p inference/frames
 ```
-#### 2. Model Weights Placement
-Take your best-performing model weights file (best.pt) obtained from your custom YOLOv8m-seg training sessions.
 
-Place the best.pt file directly into the main project root directory (at the exact same level as your execution scripts).
+`frames/` holds the annotated inference outputs written during a session.
 
-Open final.py and verify that the model path parameter points precisely to this file's location.
+### 2. Model weights
 
-#### 3. Software Dependencies Installation
-With your virtual environment activated, install the required libraries by running the following command in your terminal:
+`train/best.pt/best.pt` is the checkpoint every reported figure was measured with. Copy it
+beside `inference/final.py`, or point `MODEL_PATH` at it.
+
+> **Class names.** The checkpoint labels its classes in Turkish, while the sorting logic
+> is written against English labels. `final.py` carries a `CLASS_TRANSLATION` table that
+> bridges the two and raises `KeyError` on any unmapped class, so nothing fails silently.
+> **Verify the five pairings against your own cell before running it** — a wrong pairing
+> sends a component to the wrong bin without raising an error.
+
+### 3. Firmware
+
+Open `Edge PLC/plc_system/plc_system.ino` in the Arduino IDE or PlatformIO. Install the
+**Adafruit PWM Servo Driver** library from the Library Manager (a copy is in
+`Edge PLC/` if the manager is unavailable), then flash the ESP32 over USB.
+
+On reset the firmware cycles all four arms as a self-test. Use that to confirm channel
+order and mechanical clearance before putting anything on the belt.
+
+---
+
+## Phase 2 — hardware
+
+### 1. Power
+
+Bring up the conveyor, the laptop, the operator monitor, the camera and the servo supply
+adapters, and confirm each is stable before connecting anything.
+
+The servos run from a **dedicated supply rail**, not from the ESP32 regulator: four MG995
+units under simultaneous stall exceed what the board can deliver. Tie the grounds
+together.
+
+### 2. Serial port
+
+Find the port the ESP32 enumerated as — Device Manager on Windows, `ls /dev/tty*` on
+Linux or macOS — and set `SERIAL_PORT` in `final.py` to match. It is `COM9` as committed.
+
+### 3. Camera
+
+The industrial camera connects through a USB–HDMI capture card. Laptops assign their
+built-in webcam index 0, so the capture index in `cv2.VideoCapture()` is usually 1 or 2 —
+check it before a run.
+
+### 4. Geometry
+
+`final.py` declares the physics at the top of the file:
+
+```python
+CONVEYOR_SPEED = 0.054     # m/s, measured on the belt
+OFFSET_METERS  = 0.30      # camera optical centre to the trigger point
+DISTANCES      = { ... }   # station distance per class, in metres
+```
+
+**Measure the belt velocity on your own conveyor.** Mark a point, time its travel over
+1 m, repeat three times. Every commanded delay is `distance / CONVEYOR_SPEED`, so an error
+here scales directly into mistimed deflections — at the far station, a 15% error is about
+five seconds, which is the whole gate window.
+
+Station distances are measured from the **camera optical centre**, not from the chamber
+wall.
+
+---
+
+## Phase 3 — run
 
 ```bash
-pip install opencv-python ultralytics pyserial numpy tqdm dash requests 
+# terminal 1 — the sorting loop
+cd inference && python final.py
+
+# terminal 2 — the operator dashboard
+cd dashboard && streamlit run dashboard.py
 ```
-Technical Note: Core libraries such as os, time, random, string, and collections are built directly into Python and do not require additional installation steps.
 
-#### 4. Microcontroller Configuration & Flashing
-Open the microcontroller firmware script plc_system.ino using the Arduino IDE or PlatformIO.
+Start the sorting loop first: the dashboard reads `tespiti_log.csv`, and until that file
+exists it will say so rather than render.
 
-To prevent compilation errors, open the Library Manager and install the Adafruit PWM Servo Driver library.
+Let the belt reach steady speed before feeding the first component. Sorting success in
+the opening minutes of a session is measurably lower than in steady state.
 
-Connect your ESP32 microcontroller to your computer via a reliable data/USB cable, verify the source code, and upload/flash the firmware onto the device.
+Keep components destined for the same station at least 5,000 ms apart — that is the
+configured arm hold interval, and a second component arriving inside an open gate will
+follow the first.
 
-### PHASE 2: Hardware Configuration & Connection Management
-#### 1. Physical Power Initialization
-Ensure that the entire electrical and power distribution framework is turned on and fully stable. Check power connections for:
+**Safety.** The arms actuate without local warning whenever a command arrives over
+serial. Do not reach into the belt path while `final.py` is running. Stop it before
+clearing a jam, and power down the servo rail before any mechanical adjustment.
 
-The mechanical conveyor unit
+---
 
-Laptop / HPC local server
+## What the dashboard shows
 
-External operator monitor
+Session totals, defect count and percentage, and the most frequent class; a
+class-distribution bar chart and a per-minute detection trend; a sortable detail table;
+CSV download and one-click upload of the session log to Google Sheets.
 
-Industrial camera interface
+An operator-set threshold raises an on-screen alarm when that many defective components
+arrive **consecutively** — the signal that something upstream has gone wrong, rather than
+that one part is bad. Default is five.
 
-External power adapters for the servo driver modules
-
-#### 2. Hardware Port Verification & Mapping
-Establish your physical connections systematically according to the parameters and operational procedures below:
-
-Microcontroller to Laptop (Serial Communication):
-
-Connect the ESP32 using a high-quality USB-C cable.
-
-Critical Step: Identify the dynamically assigned port ID by opening Device Manager (Windows) or running ls /dev/tty* (Linux/macOS) (e.g., COM3 or /dev/ttyUSB0).
-
-Open your final.py script and modify the serial.Serial() initialization parameter to match this exact port ID.
-
-Camera to Laptop (Perceptual Input):
-
-Connect the industrial camera to a USB port utilizing an HDMI Video Capture Card (USB-HDMI adapter) to stream the external video feed.
-
-Critical Step: Because laptops feature built-in webcams (typically assigned index 0), you must verify and adjust the camera capture index inside final.py (e.g., cv2.VideoCapture(index) usually shifts to index 1 or 2).
-
-External Monitor to Laptop:
-
-Connect an additional monitor using an available DisplayPort, HDMI, or VGA-to-HDMI adapter to expand the visual workspace for the operator's interface dashboard.
-
-### PHASE 3: IoT Infrastructure Activation & System Launch
-To guarantee seamless interaction between the deep learning model inference, the user dashboard, and the autonomous reporting tools, you must execute the program in the following exact order:
-
-#### 1. Initialize the IoT Agent Ecosystem (Docker & n8n)
-Ensure that the Docker Desktop application is running in the background.
-
-Activate your local n8n container instance to prepare the system's webhook ingestion pathway.
-
-#### 2. Establish Network Tunneling (ngrok)
-Open a brand new terminal window and run an ngrok tunnel command to securely expose your local n8n workflow port to the public web environment:
-
-```bash
-ngrok http 5678
-```
-(Note: Modify port 5678 if your custom local n8n instance architecture utilizes a different port configuration).
-
-#### 3. Run the Core System Application
-Once the hardware links, Docker containers, and ngrok endpoints are fully initialized, launch the main processing script from your primary virtual environment terminal:
-
-```bash
-python final.py
-```
-🛑 Important Integration Notes
-Advanced IoT & n8n Automation
-The advanced data logging framework and autonomous report generation system within this project are orchestrated by an n8n-based IoT Agent executing in a Docker environment.
-
-[!CAUTION]
-Because the underlying webhook structure and n8n workflow node configurations feature highly complex architectural parameters, future researchers or developers aiming to replicate or modify this automation framework are strongly advised to refer to the Separate Workflow Documentation or contact the main system developer directly.
-
-👥 Authors & Acknowledgments
-
-Main Researcher/Developer: MUH YUZRIL IHZA BAHARUDDIN
-
-Academic Supervisor: Prof. Dr. Birol Elevli (Ondokuz Mayıs Üniversitesi)
-
-Project Context: Part of the Master's Thesis project focused on real-time industrial quality control: "Derin Öğrenme ve Üretim Yürütme Sistemi (ÜYS)".
+The session can be reset from the sidebar, which sets a new start time and shows only
+events after it. The underlying log is never modified.

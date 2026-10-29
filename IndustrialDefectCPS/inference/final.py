@@ -25,7 +25,7 @@ MIN_GLARE_AREA = 500       # Ukuran minimal pantulan cahaya (agar noise tidak me
 COOLDOWN_TIME = 2.0        # Waktu istirahat setelah trigger
 
 # --- FISIKA KONVEYOR & SERVO ---
-CONVEYOR_SPEED = 0.0467  
+CONVEYOR_SPEED = 0.054   # m/s, measured on the belt. Commanded delays scale with this.
 OFFSET_METERS = 0.30     
 
 DISTANCES = {
@@ -43,6 +43,37 @@ SERVO_SIGNALS = {
     "Moderate Defect":    b'4',
     "Critical Anomaly": b'4'
 }
+
+# ---------------------------------------------------------------------------
+# The trained weights label their classes in Turkish (see data.yaml); the logic
+# below is written against English names. This table bridges the two.
+#
+# VERIFY THESE FIVE PAIRINGS BEFORE RUNNING ON HARDWARE. A wrong pairing sends a
+# component to the wrong bin silently, which is worse than no detection at all.
+# "kusur" marks a defect region rather than a quality grade and is not a sorting
+# target, so it maps to None.
+# ---------------------------------------------------------------------------
+CLASS_TRANSLATION = {
+    "cok iyi":  "Optimal Quality",
+    "cok kotu": "Severe Defect",
+    "iyi cig":  "Unprocessed",
+    "yari iyi": "Moderate Defect",
+    "curuk":    "Critical Anomaly",
+    "kusur":    None,
+}
+
+
+def translate(label):
+    """Map a model class name to a sorting label, or None if it is not a target."""
+    if label in CLASS_TRANSLATION:
+        return CLASS_TRANSLATION[label]
+    if label in SERVO_SIGNALS:          # already an English sorting label
+        return label
+    raise KeyError(
+        f"model class {label!r} is not in CLASS_TRANSLATION. Add it, or the "
+        f"component it describes will never be sorted."
+    )
+
 
 subclass_map = {
     "Optimal Quality": "A",
@@ -180,7 +211,8 @@ try:
                 for box in results[0].boxes:
                     cls_id = int(box.cls[0])
                     conf = float(box.conf[0])
-                    label = model.names[cls_id]
+                    label = translate(model.names[cls_id])
+                    if label is None: continue
                     
                     if label == "background" or label == "0": continue 
 
