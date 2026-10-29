@@ -16,6 +16,8 @@ authors:
     given-names: "Birol"
     affiliation: "Ondokuz Mayıs University"
 type: software
+version: v1.0.0
+doi: "10.5281/zenodo.23784509"
 license: MIT
 license-url: "https://github.com/myuzrilib/IndustrialDefectCPS-YOLOv8/blob/main/LICENSE"
 repository-code: "https://github.com/myuzrilib/IndustrialDefectCPS-YOLOv8"
