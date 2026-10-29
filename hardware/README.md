@@ -1,5 +1,9 @@
 # CPS-Sort deflection station — printed brackets
 
+> **Licence.** The contents of this directory are licensed under **CERN-OHL-S v2**
+> (`LICENSE.CERN-OHL-S-v2.txt`), not the MIT licence that covers the rest of the
+> repository.
+
 Parametric re-derivation of the two 3D-printed brackets at each deflection station.
 The original AutoCAD models were lost; these are rebuilt from the author's dimensioned
 hand sketch of **26 October 2026**, which supersedes an earlier reconstruction made from

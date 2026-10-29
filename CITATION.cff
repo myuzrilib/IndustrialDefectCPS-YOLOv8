@@ -1,9 +1,35 @@
 cff-version: 1.2.0
 message: "If you use this hardware or its design files, please cite the HardwareX article."
 title: "CPS-Sort: a low-cost, open-source cyber-physical sorting cell for real-time visual quality inspection on commodity hardware"
+abstract: >-
+  A conveyor-paced visual quality inspection cell that segments each component
+  with YOLOv8s-seg on a passively cooled laptop CPU and deflects it into one of
+  four bins with servo-driven arms, built for approximately US$1,548 from
+  commodity components. This deposit holds the mechanical design files, the
+  ESP32 firmware, the host application, the operator dashboard and the training
+  script.
 authors:
   - family-names: "Baharuddin"
     given-names: "Muh Yuzril Ihza"
+    affiliation: "Ondokuz Mayıs University"
+  - family-names: "Elevli"
+    given-names: "Birol"
+    affiliation: "Ondokuz Mayıs University"
 type: software
 license: MIT
+license-url: "https://github.com/myuzrilib/IndustrialDefectCPS-YOLOv8/blob/main/LICENSE"
 repository-code: "https://github.com/myuzrilib/IndustrialDefectCPS-YOLOv8"
+keywords:
+  - open-source hardware
+  - machine vision
+  - quality inspection
+  - cyber-physical system
+  - edge computing
+  - low-cost automation
+references:
+  - type: data
+    title: "Annotated defect dataset and sorting session log"
+    doi: "10.5281/zenodo.19928743"
+    authors:
+      - family-names: "Baharuddin"
+        given-names: "Muh Yuzril Ihza"
